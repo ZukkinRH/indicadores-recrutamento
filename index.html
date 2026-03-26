@@ -563,6 +563,7 @@ function renderKPIsCandidatos() {
   document.getElementById('kpi-candidatos').innerHTML = `
     <div class="kpi-card red"><div class="kpi-label">Entrevistas Agendadas</div><div class="kpi-value">${c.total}</div></div>
     <div class="kpi-card blue"><div class="kpi-label">Entrevistas Realizadas</div><div class="kpi-value">${c.entrevistaSim}</div><div class="kpi-sub">${pct(c.entrevistaSim, c.total)}</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Entrevistas Não Realizadas</div><div class="kpi-value">${c.entrevistaNao}</div><div class="kpi-sub">${pct(c.entrevistaNao, c.total)}</div></div>
     <div class="kpi-card green"><div class="kpi-label">Testes Marcados</div><div class="kpi-value">${c.testesMarcados||0}</div></div>
     <div class="kpi-card teal"><div class="kpi-label">Testes Realizados</div><div class="kpi-value">${c.testeSim}</div><div class="kpi-sub">${pct(c.testeSim, c.testesMarcados||1)}</div></div>
     <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div><div class="kpi-sub">${c.contratMEI||0} MEI · ${c.contratFreela||0} Freela</div></div>
