@@ -163,6 +163,10 @@
       <div class="chart-card"><h3>Vagas por Status</h3><canvas id="chart-vagas-status"></canvas></div>
       <div class="chart-card"><h3>Plataformas de Captação</h3><canvas id="chart-plataformas"></canvas></div>
     </div>
+    <div class="chart-grid">
+      <div class="chart-card"><h3>Contratados por Tipo</h3><canvas id="chart-contrat-tipo"></canvas></div>
+      <div class="chart-card"><h3>Desistências por Tipo</h3><canvas id="chart-desist-tipo"></canvas></div>
+    </div>
   </div>
 
   <div id="tab-candidatos" class="tab-content">
@@ -173,6 +177,9 @@
     </div>
     <div class="chart-grid">
       <div class="chart-card full"><h3>Taxa de Conversão por Etapa</h3><canvas id="chart-conversao"></canvas></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card full"><h3>Funil Detalhado de Recrutamento</h3><canvas id="chart-funil-detail"></canvas></div>
     </div>
     <div class="table-card" id="table-candidatos-container"></div>
   </div>
@@ -245,7 +252,7 @@ const COLORS = {
 
 const DL_BAR = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, padding: { top: 4 } };
 const DL_HBAR = { display: true, anchor: 'end', align: 'right', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, offset: 4 };
-const DL_PIE = { display: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; return v > 0; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 8 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
+const DL_PIE = { display: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; if (v <= 0) return false; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(v/total*100) : 0; return pct >= 4; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 8 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
 const DL_LINE = { display: true, align: 'top', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v };
 const DL_PCT = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v + '%' : '', clamp: true, clip: false, padding: { top: 4 } };
 
@@ -283,6 +290,11 @@ function processCandidatos(csv) {
   const contH = headers.find(h => h.includes('Contratado')) || 'Contratado';
   const desistH = headers.find(h => h.includes('Desistência') && !h.includes('Contratação')) || 'Desistências';
   const testeH = headers.find(h => h.includes('Realizou')) || 'Realizou o Teste?';
+  const tipoContH = headers.find(h => h.includes('Tipo de Contratação') || h.includes('Tipo de Contrato') || h.includes('MEI')) || 'Tipo de Contratação';
+  const standByQH = headers.find(h => h === 'Stand By?' || h.includes('Stand By?')) || 'Stand By?';
+  const standByH = headers.find(h => h === 'Stand-by' || (h.includes('Stand') && !h.includes('?'))) || 'Stand-by';
+  const desistContratH = headers.find(h => h.includes('Desistência') && h.includes('Contratação')) || 'Desistência Contratação';
+  const dataTesteH = headers.find(h => h.includes('Data') && h.includes('Teste')) || 'Data do Teste Prático';
 
   const badNames = ['utilizada','Candidato','Entrevista','Realizada?','Teste Prático','Teste?','CLIQUE','EXPORTAR'];
   const validRows = data.filter(r => r[nomeH] && r[nomeH] !== '' && r[recH] && !badNames.some(x => r[recH].includes(x)));
@@ -294,6 +306,15 @@ function processCandidatos(csv) {
   const contratados = validRows.filter(r => r[contH] === 'Sim').length;
   const desistencias = validRows.filter(r => r[desistH] && r[desistH] !== '').length;
   const testeSim = validRows.filter(r => r[testeH] === 'Sim').length;
+  const contratMEI = validRows.filter(r => r[contH] === 'Sim' && r[tipoContH] && r[tipoContH].toUpperCase().includes('MEI')).length;
+  const contratFreela = validRows.filter(r => r[contH] === 'Sim' && r[tipoContH] && r[tipoContH].toUpperCase().includes('FREELA')).length;
+  const standBy = validRows.filter(r => r[standByQH] && r[standByQH] === 'Sim').length;
+  const testesMarcados = validRows.filter(r => r[dataTesteH] && r[dataTesteH] !== '').length;
+  const desistTeste = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('teste'); }).length;
+  const reprovados = validRows.filter(r => { const sb = (r[standByH]||'').toLowerCase(); return sb.includes('reprovado'); }).length;
+  const desistCusto = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('ajuda') || d.includes('custo'); }).length;
+  const desistPos = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('pós') || d.includes('entrevista'); }).length;
+  const desistContrat = validRows.filter(r => r[desistContratH] && r[desistContratH] === 'Sim').length;
 
   const byRecruiter = {};
   validRows.forEach(r => {
@@ -313,7 +334,7 @@ function processCandidatos(csv) {
   validRows.forEach(r => { const c = r[cidadeH]; if (c && c !== '') byCity[c] = (byCity[c] || 0) + 1; });
   const topCities = Object.entries(byCity).sort((a,b) => b[1] - a[1]).slice(0, 15);
 
-  return { total, entrevistaSim, entrevistaNao, aprovados, contratados, desistencias, testeSim, byRecruiter, byPlatform, topCities };
+  return { total, entrevistaSim, entrevistaNao, aprovados, contratados, desistencias, testeSim, contratMEI, contratFreela, standBy, testesMarcados, desistTeste, reprovados, desistCusto, desistPos, desistContrat, byRecruiter, byPlatform, topCities };
 }
 
 function processSLA(csv) {
@@ -459,13 +480,18 @@ function startAutoRefresh() {
 function getMonthData(type) {
   if (currentMonth === 'all') {
     if (type === 'candidatos') {
-      const merged = {total:0,entrevistaSim:0,entrevistaNao:0,aprovados:0,contratados:0,desistencias:0,testeSim:0,byRecruiter:{},byPlatform:{},topCities:[]};
+      const merged = {total:0,entrevistaSim:0,entrevistaNao:0,aprovados:0,contratados:0,desistencias:0,testeSim:0,contratMEI:0,contratFreela:0,standBy:0,testesMarcados:0,desistTeste:0,reprovados:0,desistCusto:0,desistPos:0,desistContrat:0,byRecruiter:{},byPlatform:{},topCities:[]};
       MONTHS.forEach(m => {
         const d = DATA.candidatos[m]; if (!d) return;
         merged.total += d.total; merged.entrevistaSim += d.entrevistaSim;
         merged.entrevistaNao += d.entrevistaNao; merged.aprovados += d.aprovados;
         merged.contratados += d.contratados; merged.desistencias += d.desistencias;
         merged.testeSim += d.testeSim;
+        merged.contratMEI += d.contratMEI||0; merged.contratFreela += d.contratFreela||0;
+        merged.standBy += d.standBy||0; merged.testesMarcados += d.testesMarcados||0;
+        merged.desistTeste += d.desistTeste||0; merged.reprovados += d.reprovados||0;
+        merged.desistCusto += d.desistCusto||0; merged.desistPos += d.desistPos||0;
+        merged.desistContrat += d.desistContrat||0;
         Object.entries(d.byRecruiter).forEach(([k,v]) => {
           if (!merged.byRecruiter[k]) merged.byRecruiter[k] = {total:0,entrevistas:0,aprovados:0,contratados:0,desistencias:0};
           merged.byRecruiter[k].total += v.total; merged.byRecruiter[k].entrevistas += v.entrevistas;
@@ -523,24 +549,29 @@ function renderKPIsGeral() {
   const taxaAprov = c.entrevistaSim > 0 ? Math.round(c.aprovados / c.entrevistaSim * 100) : 0;
   const taxaPreench = (s.totalVagas||0) > 0 ? Math.round((s.preenchidas||0) / s.totalVagas * 100) : 0;
   document.getElementById('kpi-geral').innerHTML = `
-    <div class="kpi-card red"><div class="kpi-label">Total Candidatos</div><div class="kpi-value">${c.total}</div><div class="kpi-sub">Agendamentos no período</div></div>
+    <div class="kpi-card red"><div class="kpi-label">Total de Entrevistas Agendadas</div><div class="kpi-value">${c.total}</div><div class="kpi-sub">Agendamentos no período</div></div>
     <div class="kpi-card blue"><div class="kpi-label">Entrevistas Realizadas</div><div class="kpi-value">${c.entrevistaSim}</div><div class="kpi-sub">${taxaEnt}% de comparecimento</div></div>
     <div class="kpi-card green"><div class="kpi-label">Aprovados</div><div class="kpi-value">${c.aprovados}</div><div class="kpi-sub">${taxaAprov}% de aprovação</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div><div class="kpi-sub">${taxaConv}% de conversão total</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Vagas Abertas</div><div class="kpi-value">${s.totalVagas||0}</div><div class="kpi-sub">${s.preenchidas||0} preenchidas (${taxaPreench}%)</div></div>
-    <div class="kpi-card teal"><div class="kpi-label">SLA Médio</div><div class="kpi-value">${s.avgSLA||0} <span style="font-size:16px">dias</span></div><div class="kpi-sub">Tempo médio de preenchimento</div></div>`;
+    <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div><div class="kpi-sub">${c.contratMEI||0} MEI · ${c.contratFreela||0} Freela</div></div>
+    <div class="kpi-card"><div class="kpi-label">Stand by</div><div class="kpi-value">${c.standBy||0}</div><div class="kpi-sub">Aguardando posição</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Desistências Total</div><div class="kpi-value">${(c.desistencias||0) + (c.desistContrat||0)}</div><div class="kpi-sub">${c.desistContrat||0} pós contratação</div></div>
+    <div class="kpi-card teal"><div class="kpi-label">SLA Médio</div><div class="kpi-value">${s.avgSLA||0} <span style="font-size:16px">dias</span></div><div class="kpi-sub">${s.totalVagas||0} vagas · ${s.preenchidas||0} preenchidas</div></div>`;
 }
 
 function renderKPIsCandidatos() {
   const c = getMonthData('candidatos'); if (!c.total && c.total !== 0) return;
   document.getElementById('kpi-candidatos').innerHTML = `
-    <div class="kpi-card red"><div class="kpi-label">Agendamentos</div><div class="kpi-value">${c.total}</div></div>
-    <div class="kpi-card blue"><div class="kpi-label">Entrevistas (Sim)</div><div class="kpi-value">${c.entrevistaSim}</div><div class="kpi-sub">${pct(c.entrevistaSim, c.total)}</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Entrevistas (Não)</div><div class="kpi-value">${c.entrevistaNao}</div><div class="kpi-sub">${pct(c.entrevistaNao, c.total)}</div></div>
-    <div class="kpi-card green"><div class="kpi-label">Aprovados R&S</div><div class="kpi-value">${c.aprovados}</div><div class="kpi-sub">${pct(c.aprovados, c.entrevistaSim)} das entrevistas</div></div>
-    <div class="kpi-card teal"><div class="kpi-label">Teste Realizado</div><div class="kpi-value">${c.testeSim}</div><div class="kpi-sub">${pct(c.testeSim, c.aprovados)} dos aprovados</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Desistências</div><div class="kpi-value">${c.desistencias}</div><div class="kpi-sub">${pct(c.desistencias, c.total)} do total</div></div>`;
+    <div class="kpi-card red"><div class="kpi-label">Entrevistas Agendadas</div><div class="kpi-value">${c.total}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">Entrevistas Realizadas</div><div class="kpi-value">${c.entrevistaSim}</div><div class="kpi-sub">${pct(c.entrevistaSim, c.total)}</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Testes Marcados</div><div class="kpi-value">${c.testesMarcados||0}</div></div>
+    <div class="kpi-card teal"><div class="kpi-label">Testes Realizados</div><div class="kpi-value">${c.testeSim}</div><div class="kpi-sub">${pct(c.testeSim, c.testesMarcados||1)}</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div><div class="kpi-sub">${c.contratMEI||0} MEI · ${c.contratFreela||0} Freela</div></div>
+    <div class="kpi-card"><div class="kpi-label">Stand by</div><div class="kpi-value">${c.standBy||0}</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Reprovados</div><div class="kpi-value">${c.reprovados||0}</div></div>
+    <div class="kpi-card red"><div class="kpi-label">Desist. Teste</div><div class="kpi-value">${c.desistTeste||0}</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Desist. Ajuda Custo</div><div class="kpi-value">${c.desistCusto||0}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Desist. Pós Entrevista</div><div class="kpi-value">${c.desistPos||0}</div></div>
+    <div class="kpi-card red"><div class="kpi-label">Desist. Contratação</div><div class="kpi-value">${c.desistContrat||0}</div></div>`;
 }
 
 function renderKPIsVagas() {
@@ -574,8 +605,8 @@ function renderChartsGeral() {
 
   destroyChart('funil');
   charts['funil'] = new Chart(document.getElementById('chart-funil'), {
-    type:'bar', data:{labels:['Agendados','Entrevistados','Aprovados','Teste','Contratados'],datasets:[{data:[c.total,c.entrevistaSim,c.aprovados,c.testeSim,c.contratados],backgroundColor:BAR_COLORS.slice(0,5),borderRadius:8,barThickness:48}]},
-    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    type:'bar', data:{labels:['Agendados','Entrevistados','Aprovados','Testes Marc.','Testes Real.','Contratados','Stand by'],datasets:[{data:[c.total,c.entrevistaSim,c.aprovados,c.testesMarcados||0,c.testeSim,c.contratados,c.standBy||0],backgroundColor:['#4A6E7E','#5C7F8F','#6B8E9E','#7B9EAD','#8EACBB','#A1BFCC','#B4CDD8'],borderRadius:8,barThickness:40}]},
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
   });
 
   destroyChart('evolucao');
@@ -589,9 +620,10 @@ function renderChartsGeral() {
   });
 
   destroyChart('vagas-status');
+  const DL_PIE_ALL = { display: function(ctx) { return ctx.dataset.data[ctx.dataIndex] > 0; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 5 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
   charts['vagas-status'] = new Chart(document.getElementById('chart-vagas-status'), {
     type:'doughnut', data:{labels:['Preenchidas','Em Recrutamento','Canceladas'],datasets:[{data:[s.preenchidas||0,s.emRecrutamento||0,s.canceladas||0],backgroundColor:['#6B8E9E','#8EACBB','#B4CDD8'],borderWidth:0,hoverOffset:8}]},
-    options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:DL_PIE},cutout:'60%'}
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:16}},datalabels:DL_PIE_ALL},cutout:'55%'}
   });
 
   destroyChart('plataformas');
@@ -599,6 +631,24 @@ function renderChartsGeral() {
   charts['plataformas'] = new Chart(document.getElementById('chart-plataformas'), {
     type:'doughnut', data:{labels:platEntries.map(e=>e[0]),datasets:[{data:platEntries.map(e=>e[1]),backgroundColor:BAR_COLORS.slice(0,platEntries.length),borderWidth:2,borderColor:'#fff',hoverOffset:8}]},
     options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:11}}},datalabels:DL_PIE},cutout:'50%'}
+  });
+
+  destroyChart('contrat-tipo');
+  const meiVal = c.contratMEI||0, freelaVal = c.contratFreela||0, outrosVal = Math.max(0, (c.contratados||0) - meiVal - freelaVal);
+  const contratLabels = ['MEI','Freela']; const contratData = [meiVal, freelaVal];
+  const contratColors = ['#5C7F8F','#A1BFCC'];
+  if (outrosVal > 0) { contratLabels.push('Outros'); contratData.push(outrosVal); contratColors.push('#D5E5EB'); }
+  charts['contrat-tipo'] = new Chart(document.getElementById('chart-contrat-tipo'), {
+    type:'doughnut', data:{labels:contratLabels,datasets:[{data:contratData,backgroundColor:contratColors,borderWidth:2,borderColor:'#fff',hoverOffset:8}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:16,usePointStyle:true,pointStyle:'circle'}},datalabels:DL_PIE},cutout:'55%'}
+  });
+
+  destroyChart('desist-tipo');
+  const desistLabels = ['Pós Entrevista','Teste','Ajuda de Custo','Pós Contratação'];
+  const desistData = [c.desistPos||0, c.desistTeste||0, c.desistCusto||0, c.desistContrat||0];
+  charts['desist-tipo'] = new Chart(document.getElementById('chart-desist-tipo'), {
+    type:'bar', data:{labels:desistLabels,datasets:[{data:desistData,backgroundColor:['#7B9EAD','#5C7F8F','#A1BFCC','#4A6E7E'],borderRadius:8,barThickness:48}]},
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 }
 
@@ -620,14 +670,23 @@ function renderChartsCandidatos() {
   });
 
   destroyChart('conversao');
-  const stages = ['Agendados','Entrevistados','Aprovados','Teste Realizado','Contratados'];
-  const values = [c.total,c.entrevistaSim,c.aprovados,c.testeSim,c.contratados];
+  const stages = ['Agendados','Entrevistados','Aprovados','Testes Marc.','Testes Real.','Contratados'];
+  const values = [c.total,c.entrevistaSim,c.aprovados,c.testesMarcados||0,c.testeSim,c.contratados];
   const pcts = values.map((v,i) => i===0?100:Math.round(v/values[0]*100));
   charts['conversao'] = new Chart(document.getElementById('chart-conversao'), {
     type:'bar', data:{labels:stages,datasets:[
-      {label:'Quantidade',data:values,backgroundColor:BAR_COLORS.slice(0,5),borderRadius:8,barThickness:60,yAxisID:'y',datalabels:{display:true,anchor:'center',align:'center',color:'#fff',font:{weight:'bold',size:14},formatter:v=>v>0?v:''}},
+      {label:'Quantidade',data:values,backgroundColor:['#4A6E7E','#5C7F8F','#6B8E9E','#7B9EAD','#8EACBB','#A1BFCC'],borderRadius:8,barThickness:50,yAxisID:'y',datalabels:{display:true,anchor:'center',align:'center',color:'#fff',font:{weight:'bold',size:14},formatter:v=>v>0?v:''}},
       {label:'% do Total',data:pcts,type:'line',borderColor:'#3D6070',backgroundColor:'transparent',pointRadius:8,pointBackgroundColor:'#3D6070',tension:0.3,yAxisID:'y1',datalabels:{display:true,anchor:'end',align:'top',offset:6,color:'#3D6070',font:{weight:'bold',size:13},formatter:v=>v+'%',clamp:true,clip:false}}
-    ]}, options:{responsive:true,layout:{padding:{top:30}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Quantidade'}},y1:{beginAtZero:true,max:110,position:'right',grid:{display:false},title:{display:true,text:'% Conversão'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:30}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Quantidade'}},y1:{beginAtZero:true,max:110,position:'right',grid:{display:false},title:{display:true,text:'% Conversão'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+
+  destroyChart('funil-detail');
+  const fdLabels = ['Entrev. Agendadas','Entrev. Realizadas','Testes Marcados','Testes Realizados','Contratados','Stand by','Reprovados','Desist. Teste','Desist. Pós Entrev.','Desist. Ajuda Custo','Desist. Contratação'];
+  const fdData = [c.total, c.entrevistaSim, c.testesMarcados||0, c.testeSim, c.contratados, c.standBy||0, c.reprovados||0, c.desistTeste||0, c.desistPos||0, c.desistCusto||0, c.desistContrat||0];
+  const fdColors = ['#3D6070','#4A6E7E','#5C7F8F','#6B8E9E','#7B9EAD','#8EACBB','#9AB5C3','#A1BFCC','#B4CDD8','#C7DCE4','#D5E5EB'];
+  charts['funil-detail'] = new Chart(document.getElementById('chart-funil-detail'), {
+    type:'bar', data:{labels:fdLabels,datasets:[{data:fdData,backgroundColor:fdColors,borderRadius:6,barThickness:28}]},
+    options:{indexAxis:'y',responsive:true,layout:{padding:{right:40}},plugins:{legend:{display:false},datalabels:DL_HBAR},scales:{x:{beginAtZero:true,grid:{color:'#F0F0F0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
   });
 
   const recs = Object.entries(c.byRecruiter).sort((a,b)=>b[1].total-a[1].total);
