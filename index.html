@@ -243,11 +243,11 @@ const COLORS = {
   palette: BAR_COLORS
 };
 
-const DL_BAR = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false };
-const DL_HBAR = { display: true, anchor: 'end', align: 'right', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false };
-const DL_PIE = { display: 'auto', color: '#fff', font: { weight: 'bold', size: 11 }, formatter: (value, ctx) => { const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 3 ? value + ' (' + pct + '%)' : value; }};
+const DL_BAR = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, padding: { top: 4 } };
+const DL_HBAR = { display: true, anchor: 'end', align: 'right', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, offset: 4 };
+const DL_PIE = { display: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; return v > 0; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 8 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
 const DL_LINE = { display: true, align: 'top', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v };
-const DL_PCT = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v + '%' : '', clamp: true, clip: false };
+const DL_PCT = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v + '%' : '', clamp: true, clip: false, padding: { top: 4 } };
 
 // ============ CSV PARSER ============
 function parseCSV(csv) {
@@ -575,7 +575,7 @@ function renderChartsGeral() {
   destroyChart('funil');
   charts['funil'] = new Chart(document.getElementById('chart-funil'), {
     type:'bar', data:{labels:['Agendados','Entrevistados','Aprovados','Teste','Contratados'],datasets:[{data:[c.total,c.entrevistaSim,c.aprovados,c.testeSim,c.contratados],backgroundColor:BAR_COLORS.slice(0,5),borderRadius:8,barThickness:48}]},
-    options:{responsive:true,plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('evolucao');
@@ -585,7 +585,7 @@ function renderChartsGeral() {
       {label:'Agendamentos',data:[cJan.total||0,cFev.total||0,cMar.total||0],borderColor:'#4A6E7E',backgroundColor:'#4A6E7E20',fill:true,tension:0.3,pointRadius:6,pointBackgroundColor:'#4A6E7E'},
       {label:'Entrevistas',data:[cJan.entrevistaSim||0,cFev.entrevistaSim||0,cMar.entrevistaSim||0],borderColor:'#8EACBB',backgroundColor:'#8EACBB20',fill:true,tension:0.3,pointRadius:6,pointBackgroundColor:'#8EACBB'},
       {label:'Contratados',data:[cJan.contratados||0,cFev.contratados||0,cMar.contratados||0],borderColor:'#B4CDD8',backgroundColor:'#B4CDD820',fill:true,tension:0.3,pointRadius:6,pointBackgroundColor:'#B4CDD8'}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:DL_LINE},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:DL_LINE},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('vagas-status');
@@ -609,14 +609,14 @@ function renderChartsCandidatos() {
   const platE = Object.entries(c.byPlatform).sort((a,b)=>b[1]-a[1]);
   charts['plat-detail'] = new Chart(document.getElementById('chart-plat-detail'), {
     type:'bar', data:{labels:platE.map(e=>e[0]),datasets:[{data:platE.map(e=>e[1]),backgroundColor:BAR_COLOR,borderRadius:6,barThickness:32}]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},datalabels:DL_HBAR},scales:{x:{beginAtZero:true,grid:{color:'#F0F0F0'}},y:{grid:{display:false}}}}
+    options:{indexAxis:'y',responsive:true,layout:{padding:{right:40}},plugins:{legend:{display:false},datalabels:DL_HBAR},scales:{x:{beginAtZero:true,grid:{color:'#F0F0F0'}},y:{grid:{display:false}}}}
   });
 
   destroyChart('cidades');
   const cities = (c.topCities||[]).slice(0,10);
   charts['cidades'] = new Chart(document.getElementById('chart-cidades'), {
     type:'bar', data:{labels:cities.map(e=>e[0]),datasets:[{data:cities.map(e=>e[1]),backgroundColor:BAR_COLOR,borderRadius:6,barThickness:24}]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},datalabels:DL_HBAR},scales:{x:{beginAtZero:true,grid:{color:'#F0F0F0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+    options:{indexAxis:'y',responsive:true,layout:{padding:{right:40}},plugins:{legend:{display:false},datalabels:DL_HBAR},scales:{x:{beginAtZero:true,grid:{color:'#F0F0F0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
   });
 
   destroyChart('conversao');
@@ -627,7 +627,7 @@ function renderChartsCandidatos() {
     type:'bar', data:{labels:stages,datasets:[
       {label:'Quantidade',data:values,backgroundColor:BAR_COLORS.slice(0,5),borderRadius:8,barThickness:60,yAxisID:'y',datalabels:{display:true,anchor:'center',align:'center',color:'#fff',font:{weight:'bold',size:14},formatter:v=>v>0?v:''}},
       {label:'% do Total',data:pcts,type:'line',borderColor:'#3D6070',backgroundColor:'transparent',pointRadius:8,pointBackgroundColor:'#3D6070',tension:0.3,yAxisID:'y1',datalabels:{display:true,anchor:'end',align:'top',offset:6,color:'#3D6070',font:{weight:'bold',size:13},formatter:v=>v+'%',clamp:true,clip:false}}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Quantidade'}},y1:{beginAtZero:true,max:110,position:'right',grid:{display:false},title:{display:true,text:'% Conversão'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:30}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Quantidade'}},y1:{beginAtZero:true,max:110,position:'right',grid:{display:false},title:{display:true,text:'% Conversão'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
   });
 
   const recs = Object.entries(c.byRecruiter).sort((a,b)=>b[1].total-a[1].total);
@@ -643,7 +643,7 @@ function renderChartsVagas() {
     type:'bar', data:{labels:regEntries.map(e=>e[0].replace('Região ','')),datasets:[
       {label:'Total',data:regEntries.map(e=>e[1].total),backgroundColor:'#7B9EAD',borderRadius:6,datalabels:DL_BAR},
       {label:'Preenchidas',data:regEntries.map(e=>e[1].preenchidas),backgroundColor:'#B4CDD8',borderRadius:6,datalabels:DL_BAR}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('sla-recruiter');
@@ -652,7 +652,7 @@ function renderChartsVagas() {
     type:'bar', data:{labels:slaRecs.map(e=>e[0]),datasets:[
       {label:'SLA Médio (dias)',data:slaRecs.map(e=>e[1].slaCount>0?Math.round(e[1].slaSum/e[1].slaCount):0),backgroundColor:slaRecs.map(e=>getRecColorAlpha(e[0],0.8)),borderColor:slaRecs.map(e=>getRecColor(e[0])),borderWidth:2,borderRadius:6,datalabels:{...DL_BAR,formatter:v=>v>0?v+'d':''}},
       {label:'Vagas Preenchidas',data:slaRecs.map(e=>e[1].preenchidas),backgroundColor:slaRecs.map(e=>getRecColorAlpha(e[0],0.4)),borderColor:slaRecs.map(e=>getRecColor(e[0])),borderWidth:2,borderRadius:6,datalabels:DL_BAR}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('tipo-vaga');
@@ -666,7 +666,7 @@ function renderChartsVagas() {
   const sJan = DATA.sla.Jan||{}, sFev = DATA.sla.Fev||{}, sMar = DATA.sla.Mar||{};
   charts['sla-evolucao'] = new Chart(document.getElementById('chart-sla-evolucao'), {
     type:'line', data:{labels:['Janeiro','Fevereiro','Março'],datasets:[{label:'SLA Médio (dias)',data:[sJan.avgSLA||0,sFev.avgSLA||0,sMar.avgSLA||0],borderColor:'#4A6E7E',backgroundColor:'#4A6E7E30',fill:true,tension:0.3,pointRadius:8,pointBackgroundColor:'#4A6E7E',borderWidth:3}]},
-    options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:true,align:'top',color:'#4A6E7E',font:{weight:'bold',size:14},formatter:v=>v+' dias'}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Dias'}},x:{grid:{display:false}}}}
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:{display:true,align:'top',color:'#4A6E7E',font:{weight:'bold',size:14},formatter:v=>v+' dias'}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},title:{display:true,text:'Dias'}},x:{grid:{display:false}}}}
   });
 
   const recs = Object.entries(s.byRecruiter).sort((a,b)=>b[1].total-a[1].total);
@@ -683,7 +683,7 @@ function renderChartsRecrutadores() {
   destroyChart('rec-agend');
   charts['rec-agend'] = new Chart(document.getElementById('chart-rec-agend'), {
     type:'bar', data:{labels:names,datasets:[{data:recs.map(e=>e[1].total),backgroundColor:BAR_COLOR,borderRadius:8,barThickness:48}]},
-    options:{responsive:true,plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_BAR},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('rec-entrev');
@@ -691,13 +691,13 @@ function renderChartsRecrutadores() {
     type:'bar', data:{labels:names,datasets:[
       {label:'Realizadas',data:recs.map(e=>e[1].entrevistas),backgroundColor:'#7B9EAD',borderRadius:6,datalabels:DL_BAR},
       {label:'Não Realizadas',data:recs.map(e=>e[1].total-e[1].entrevistas),backgroundColor:'#C7DCE4',borderRadius:6,datalabels:DL_BAR}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('rec-aprov');
   charts['rec-aprov'] = new Chart(document.getElementById('chart-rec-aprov'), {
     type:'bar', data:{labels:names,datasets:[{label:'Taxa de Aprovação (%)',data:recs.map(e=>e[1].entrevistas>0?Math.round(e[1].aprovados/e[1].entrevistas*100):0),backgroundColor:BAR_COLOR,borderRadius:8,barThickness:48}]},
-    options:{responsive:true,plugins:{legend:{display:false},datalabels:DL_PCT},scales:{y:{beginAtZero:true,max:110,grid:{color:'#F0F0F0'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
+    options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{display:false},datalabels:DL_PCT},scales:{y:{beginAtZero:true,max:110,grid:{color:'#F0F0F0'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}
   });
 
   destroyChart('rec-contrat');
@@ -705,7 +705,7 @@ function renderChartsRecrutadores() {
     type:'bar', data:{labels:names,datasets:[
       {label:'Contratados',data:recs.map(e=>e[1].contratados),backgroundColor:'#7B9EAD',borderRadius:6,datalabels:DL_BAR},
       {label:'Desistências',data:recs.map(e=>e[1].desistencias),backgroundColor:'#C7DCE4',borderRadius:6,datalabels:{...DL_BAR,color:'#666'}}
-    ]}, options:{responsive:true,plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
+    ]}, options:{responsive:true,layout:{padding:{top:25}},plugins:{legend:{position:'bottom'},datalabels:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'}},x:{grid:{display:false}}}}
   });
 
   document.getElementById('table-recrutadores-container').innerHTML = `<h3>Comparativo Detalhado de Recrutadores</h3>
