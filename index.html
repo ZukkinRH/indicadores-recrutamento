@@ -204,7 +204,7 @@
       <div class="chart-card"><h3>Entrevistas Realizadas por Recrutador</h3><canvas id="chart-rec-entrev"></canvas></div>
     </div>
     <div class="chart-grid">
-      <div class="chart-card"><h3>Taxa de Aprovação por Recrutador</h3><canvas id="chart-rec-aprov"></canvas></div>
+      <div class="chart-card"><h3>Taxa de Aprovação para Realização do Teste por Recrutador</h3><canvas id="chart-rec-aprov"></canvas></div>
       <div class="chart-card"><h3>Contratações por Recrutador</h3><canvas id="chart-rec-contrat"></canvas></div>
     </div>
     <div class="table-card" id="table-recrutadores-container"></div>
@@ -252,7 +252,7 @@ const COLORS = {
 
 const DL_BAR = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, padding: { top: 4 } };
 const DL_HBAR = { display: true, anchor: 'end', align: 'right', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v : '', clamp: true, clip: false, offset: 4 };
-const DL_PIE = { display: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; if (v <= 0) return false; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(v/total*100) : 0; return pct >= 4; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 8 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
+const DL_PIE = { display: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; if (v <= 0) return false; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(v/total*100) : 0; return pct >= 2; }, color: '#fff', font: { weight: 'bold', size: 11 }, textAlign: 'center', formatter: (value, ctx) => { if (value <= 0) return ''; const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0); const pct = total > 0 ? Math.round(value/total*100) : 0; return pct >= 8 ? value + '\n(' + pct + '%)' : value; }, clamp: true, clip: false };
 const DL_LINE = { display: true, align: 'top', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v };
 const DL_PCT = { display: true, anchor: 'end', align: 'end', color: '#333', font: { weight: 'bold', size: 12 }, formatter: v => v > 0 ? v + '%' : '', clamp: true, clip: false, padding: { top: 4 } };
 
@@ -311,7 +311,7 @@ function processCandidatos(csv) {
   const standBy = validRows.filter(r => r[standByQH] && r[standByQH] === 'Sim').length;
   const testesMarcados = validRows.filter(r => r[dataTesteH] && r[dataTesteH] !== '').length;
   const desistTeste = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('teste'); }).length;
-  const reprovados = validRows.filter(r => { const sb = (r[standByH]||'').toLowerCase(); return sb.includes('reprovado'); }).length;
+  const reprovados = validRows.filter(r => r[entrevH] === 'Sim' && r[aprovH] !== 'Sim').length;
   const desistCusto = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('ajuda') || d.includes('custo'); }).length;
   const desistPos = validRows.filter(r => { const d = (r[desistH]||'').toLowerCase(); return d.includes('pós') || d.includes('entrevista'); }).length;
   const desistContrat = validRows.filter(r => r[desistContratH] && r[desistContratH] === 'Sim').length;
@@ -554,7 +554,7 @@ function renderKPIsGeral() {
     <div class="kpi-card green"><div class="kpi-label">Aprovados</div><div class="kpi-value">${c.aprovados}</div><div class="kpi-sub">${taxaAprov}% de aprovação</div></div>
     <div class="kpi-card purple"><div class="kpi-label">Contratados</div><div class="kpi-value">${c.contratados}</div><div class="kpi-sub">${c.contratMEI||0} MEI · ${c.contratFreela||0} Freela</div></div>
     <div class="kpi-card"><div class="kpi-label">Stand by</div><div class="kpi-value">${c.standBy||0}</div><div class="kpi-sub">Aguardando posição</div></div>
-    <div class="kpi-card orange"><div class="kpi-label">Desistências Total</div><div class="kpi-value">${(c.desistencias||0) + (c.desistContrat||0)}</div><div class="kpi-sub">${c.desistContrat||0} pós contratação</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Desistências Total</div><div class="kpi-value">${(c.desistencias||0) + (c.desistContrat||0)}</div><div class="kpi-sub">${c.desistContrat||0} durante contratação</div></div>
     <div class="kpi-card teal"><div class="kpi-label">SLA Médio</div><div class="kpi-value">${s.avgSLA||0} <span style="font-size:16px">dias</span></div><div class="kpi-sub">${s.totalVagas||0} vagas · ${s.preenchidas||0} preenchidas</div></div>`;
 }
 
@@ -572,7 +572,7 @@ function renderKPIsCandidatos() {
     <div class="kpi-card red"><div class="kpi-label">Desist. Teste</div><div class="kpi-value">${c.desistTeste||0}</div></div>
     <div class="kpi-card orange"><div class="kpi-label">Desist. Ajuda Custo</div><div class="kpi-value">${c.desistCusto||0}</div></div>
     <div class="kpi-card"><div class="kpi-label">Desist. Pós Entrevista</div><div class="kpi-value">${c.desistPos||0}</div></div>
-    <div class="kpi-card red"><div class="kpi-label">Desist. Contratação</div><div class="kpi-value">${c.desistContrat||0}</div></div>`;
+    <div class="kpi-card red"><div class="kpi-label">Desist. Durante Contratação</div><div class="kpi-value">${c.desistContrat||0}</div></div>`;
 }
 
 function renderKPIsVagas() {
@@ -645,7 +645,7 @@ function renderChartsGeral() {
   });
 
   destroyChart('desist-tipo');
-  const desistLabels = ['Pós Entrevista','Teste','Ajuda de Custo','Pós Contratação'];
+  const desistLabels = ['Pós Entrevista','Teste','Ajuda de Custo','Durante Contratação'];
   const desistData = [c.desistPos||0, c.desistTeste||0, c.desistCusto||0, c.desistContrat||0];
   charts['desist-tipo'] = new Chart(document.getElementById('chart-desist-tipo'), {
     type:'bar', data:{labels:desistLabels,datasets:[{data:desistData,backgroundColor:['#7B9EAD','#5C7F8F','#A1BFCC','#4A6E7E'],borderRadius:8,barThickness:48}]},
@@ -682,7 +682,7 @@ function renderChartsCandidatos() {
   });
 
   destroyChart('funil-detail');
-  const fdLabels = ['Entrev. Agendadas','Entrev. Realizadas','Testes Marcados','Testes Realizados','Contratados','Stand by','Reprovados','Desist. Teste','Desist. Pós Entrev.','Desist. Ajuda Custo','Desist. Contratação'];
+  const fdLabels = ['Entrev. Agendadas','Entrev. Realizadas','Testes Marcados','Testes Realizados','Contratados','Stand by','Reprovados','Desist. Teste','Desist. Pós Entrev.','Desist. Ajuda Custo','Desist. Durante Contrat.'];
   const fdData = [c.total, c.entrevistaSim, c.testesMarcados||0, c.testeSim, c.contratados, c.standBy||0, c.reprovados||0, c.desistTeste||0, c.desistPos||0, c.desistCusto||0, c.desistContrat||0];
   const fdColors = ['#3D6070','#4A6E7E','#5C7F8F','#6B8E9E','#7B9EAD','#8EACBB','#9AB5C3','#A1BFCC','#B4CDD8','#C7DCE4','#D5E5EB'];
   charts['funil-detail'] = new Chart(document.getElementById('chart-funil-detail'), {
